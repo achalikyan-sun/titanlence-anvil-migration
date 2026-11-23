@@ -2,9 +2,10 @@
   "name": "titanlence-anvil-migration",
   "version": "1.0.0",
   "description": "Prototype: Analytics 3.0 rebuilt with real Anvil2 components",
-  "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc"
   },
   "repository": {
     "type": "git",
@@ -19,6 +20,16 @@
   },
   "homepage": "https://github.com/achalikyan-sun/titanlence-anvil-migration#readme",
   "dependencies": {
-    "@servicetitan/anvil2": "^3.19.1"
+    "@servicetitan/anvil2": "3.19.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router-dom": "^7.18.6"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8"
   }
 }
