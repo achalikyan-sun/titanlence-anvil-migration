@@ -1,25 +1,17 @@
 import { Route, Routes } from "react-router-dom";
-import { Page, Text } from "@servicetitan/anvil2";
+import { Toaster } from "@servicetitan/anvil2";
+import { Overview } from "./screens/Overview";
+import { DashboardDetail } from "./screens/DashboardDetail";
 
-// App shell. Screens are added as routes inside this shell.
-function Home() {
-  return (
-    <Page>
-      <Page.Header
-        title="Analytics 3.0"
-        description={<Text>Prototype shell. Add the first screen as a route.</Text>}
-      />
-      <Page.Content>
-        <Text>Shell is running with real Anvil2 components.</Text>
-      </Page.Content>
-    </Page>
-  );
-}
-
+// App shell. Screens are routes inside this shell.
 export function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/" element={<Overview />} />
+        <Route path="/dashboards/:id" element={<DashboardDetail />} />
+      </Routes>
+      <Toaster id="prototype-toaster" />
+    </>
   );
 }
