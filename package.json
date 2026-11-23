@@ -1,0 +1,24 @@
+{
+  "name": "titanlence-anvil-migration",
+  "version": "1.0.0",
+  "description": "Prototype: Analytics 3.0 rebuilt with real Anvil2 components",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/achalikyan-sun/titanlence-anvil-migration.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/achalikyan-sun/titanlence-anvil-migration/issues"
+  },
+  "homepage": "https://github.com/achalikyan-sun/titanlence-anvil-migration#readme",
+  "dependencies": {
+    "@servicetitan/anvil2": "^3.19.1"
+  }
+}
