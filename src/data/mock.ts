@@ -1,37 +1,118 @@
 // Mock-only seed data. Everything lives in memory and resets on refresh.
 
-export type Kpi = {
-  id: string;
-  title: string;
-  value: string;
-  period: string;
-  delta?: { pct: string; direction: "up" | "down"; prior: string; priorPeriod: string };
-  trend?: number[];
-  source: string;
-};
+import type { KpiSeed } from "../lib/kpi";
 
-export const KPIS: Kpi[] = [
+// Watchlist tiles. Values come from the production reference ("Total Jobs Completed" etc.).
+// Deltas are derived from value + prior in lib/kpi.ts, never typed in here.
+export const KPIS: KpiSeed[] = [
   {
     id: "k1",
-    title: "Excellent Query Performance",
-    value: "23.97%",
-    period: "Jul 2026",
-    delta: { pct: "282.90%", direction: "up", prior: "(6.26%)", priorPeriod: "Jun 2026" },
-    trend: [8, 14, 12, 12, 13, 12, 13, 14],
-    source: "AI and BI System Liveboard",
+    title: "Total Jobs Completed",
+    info: "Jobs marked completed in the selected period.",
+    format: "count",
+    defaultPeriod: "month",
+    source: "Operations Dashboard",
+    sourceDashboardId: "dash-001",
+    base: { value: 0, prior: 58, trend: [12, 14, 13, 15, 18, 26, 31, 22, 0] },
   },
   {
     id: "k2",
-    title: "Liveboard Impressions",
-    value: "3.72K",
-    period: "Jul 2026",
-    delta: { pct: "40.93%", direction: "down", prior: "(6.3K)", priorPeriod: "Jun 2026" },
-    trend: [10, 11, 14, 12, 13, 12, 12, 12],
+    title: "Excellent Query Performance",
+    format: "percent",
+    defaultPeriod: "month",
     source: "AI and BI System Liveboard",
+    sourceDashboardId: "dash-011",
+    base: { value: 23.97, prior: 6.26, trend: [8, 14, 12, 12, 13, 12, 13, 14, 24] },
   },
-  { id: "k3", title: "Annual Active Users", value: "0", period: "", source: "AI and BI System Liveboard" },
-  { id: "k4", title: "Weekly Active Users", value: "38", period: "", source: "AI and BI System Liveboard" },
-  { id: "k5", title: "Quarterly Active Users", value: "132", period: "", source: "AI and BI System Liveboard" },
+  {
+    id: "k3",
+    title: "Liveboard Impressions",
+    format: "count",
+    defaultPeriod: "month",
+    source: "AI and BI System Liveboard",
+    sourceDashboardId: "dash-011",
+    base: { value: 3720, prior: 6300, trend: [10, 11, 14, 12, 13, 12, 12, 12, 9] },
+  },
+  {
+    id: "k4",
+    title: "Callback Rate",
+    info: "Share of jobs that needed a return visit. Lower is better.",
+    format: "percent",
+    defaultPeriod: "week",
+    goodDirection: "down", // fewer callbacks is good, so a drop is green
+    source: "Operations Dashboard",
+    sourceDashboardId: "dash-001",
+    base: { value: 4.2, prior: 5.1, trend: [6, 5.8, 5.5, 5.1, 4.9, 4.6, 4.4, 4.2] },
+  },
+  {
+    id: "k5",
+    title: "Weekly Active Users",
+    format: "count",
+    defaultPeriod: "week",
+    source: "AI and BI System Liveboard",
+    sourceDashboardId: "dash-011",
+    base: { value: 38 }, // no prior and no trend: delta line and sparkline are simply absent
+  },
+  {
+    id: "k6",
+    title: "Annual Active Users",
+    format: "count",
+    defaultPeriod: "year",
+    source: "AI and BI System Liveboard",
+    sourceDashboardId: "dash-011",
+    base: { value: null }, // no data
+  },
+];
+
+// Every shape the card has to survive. Rendered on #/kpi-cards. `label` names the case here in the code and is not shown on the page.
+export const KPI_EDGE_CASES: { label: string; seed: KpiSeed; state?: "ready" | "loading" | "error" }[] = [
+  { label: "Positive (up is good)", seed: KPIS[1] },
+  { label: "Negative (down is bad), zero value", seed: KPIS[0] },
+  { label: "Positive (down is good)", seed: KPIS[3] },
+  { label: "No prior, no trend", seed: KPIS[4] },
+  { label: "No data (null)", seed: KPIS[5] },
+  {
+    label: "Very long title",
+    seed: { id: "e1", title: "Average Revenue Per Completed Job Across All Business Units, Service Lines and Membership Tiers", format: "currency", defaultPeriod: "month", source: "Executive Dashboard: Projects", base: { value: 1234.5, prior: 1100, trend: [1, 2, 3, 2, 4] } },
+  },
+  {
+    label: "Very long value",
+    seed: { id: "e2", title: "Lifetime Revenue", format: "currency", defaultPeriod: "month", source: "Finance", base: { value: 98765432100, prior: 91000000000, trend: [1, 3, 2, 5, 8] } },
+  },
+  {
+    label: "Negative value",
+    seed: { id: "e3", title: "Net Cash Flow", format: "currency", defaultPeriod: "month", source: "Finance", base: { value: -12400, prior: 8200, trend: [5, 3, 1, -2, -4] } },
+  },
+  {
+    label: "Prior is 0 (New)",
+    seed: { id: "e4", title: "New Memberships", format: "count", defaultPeriod: "month", source: "Memberships", base: { value: 14, prior: 0, trend: [0, 0, 2, 5, 14] } },
+  },
+  {
+    label: "Neutral (no change)",
+    seed: { id: "e5", title: "Open Estimates", format: "count", defaultPeriod: "month", source: "Sales", base: { value: 120, prior: 120, trend: [118, 120, 119, 121, 120] } },
+  },
+  {
+    label: "Huge % change",
+    seed: { id: "e6", title: "Web Leads", format: "count", defaultPeriod: "month", source: "Marketing", base: { value: 52000, prior: 40, trend: [1, 2, 9, 40, 52] } },
+  },
+  {
+    label: "Flat trend",
+    seed: { id: "e7", title: "Technician Count", format: "count", defaultPeriod: "month", source: "HR", base: { value: 42, prior: 40, trend: [42, 42, 42, 42, 42] } },
+  },
+  {
+    label: "Trend with NaN / too few points",
+    seed: { id: "e8", title: "Booked Jobs", format: "count", defaultPeriod: "month", source: "Booking", base: { value: 310, prior: 280, trend: [Number.NaN, 5, Number.NaN] } },
+  },
+  {
+    label: "No source (footer hidden)",
+    seed: { id: "e9", title: "Average Ticket", format: "currency", defaultPeriod: "month", base: { value: 412, prior: 398, trend: [390, 395, 398, 402, 412] } },
+  },
+  {
+    label: "Very long source name (link truncates)",
+    seed: { id: "e11", title: "Open Estimates", format: "count", defaultPeriod: "month", source: "Residential Plumbing Sales Pipeline and Estimate Follow-up Executive Liveboard", sourceDashboardId: "dash-001", base: { value: 88, prior: 80 } },
+  },
+  { label: "Loading", seed: KPIS[1], state: "loading" },
+  { label: "Error", seed: KPIS[1], state: "error" },
 ];
 
 export type Metric = { id: string; name: string; category: string; certified: boolean };
@@ -75,6 +156,7 @@ const NAMES = [
   "Accounts Receivable Aging",
   "Membership Health",
   "Dispatch Efficiency",
+  "AI and BI System Liveboard",
 ];
 const OWNERS = ["ServiceTitan", "Alex Kablanian", "marodemo"];
 const BADGES: Dashboard["badge"][] = ["Built-In", "Created by Me", "Shared with Me"];

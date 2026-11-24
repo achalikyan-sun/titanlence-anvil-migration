@@ -21,6 +21,10 @@
   "homepage": "https://github.com/achalikyan-sun/titanlence-anvil-migration#readme",
   "dependencies": {
     "@servicetitan/anvil2": "3.19.1",
+    "@servicetitan/anvil2-charts-kit": "0.2.0",
+    "@servicetitan/anvil2-illustrations": "1.3.5",
+    "echarts": "5.6.0",
+    "echarts-for-react": "3.0.2",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-router-dom": "^7.18.6"
