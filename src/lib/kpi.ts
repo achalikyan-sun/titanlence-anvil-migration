@@ -4,12 +4,14 @@
 // number shown on the card (percent change, absolute change, direction) is derived here so
 // the same inputs always render the same card.
 
+// The most cards a watchlist can hold. One limit for the tiles, the metric picker and the empty-state copy.
+export const MAX_WATCHLIST_CARDS = 5;
+
 export type KpiPeriod = "day" | "week" | "month" | "quarter" | "year";
 export type KpiFormat = "count" | "percent" | "currency";
 
-// Period menu. "default" resets the tile to the period its watchlist owner chose.
+// Period menu. Each tile starts on its own defaultPeriod and the menu changes it from there.
 export const PERIOD_MENU = [
-  { id: "default", label: "Watchlist default" },
   { id: "day", label: "Day" },
   { id: "week", label: "Week" },
   { id: "month", label: "Month" },
@@ -57,9 +59,8 @@ export type KpiSeed = {
   title: string;
   format: KpiFormat;
   defaultPeriod: KpiPeriod;
-  source?: string;
-  // Dashboard the source name opens. Without it the footer is plain text.
-  sourceDashboardId?: string;
+  // Where the number comes from. Always a link: a name never exists without the dashboard it opens.
+  source?: { name: string; dashboardId: string };
   // Which direction of change is good. Most metrics: "up". Cost or error-rate metrics: "down".
   goodDirection?: "up" | "down";
   // Help text for the info icon in the header. Icon hidden when absent.

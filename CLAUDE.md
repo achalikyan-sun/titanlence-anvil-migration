@@ -20,6 +20,8 @@ Follow the `anvil2-code-prototyping` skill in `.claude/skills/` for the full rul
 - Plain React + TypeScript app (Vite). `AnvilProvider` at the root, provided by the app shell.
 - Hash router, so it can be hosted statically.
 - Each drawer or overlay gets a stable URL slug, for example `#/page?state=add-item`.
+- Input fields use one size across the layout: Anvil's default `medium` (40px, 16px text), the size of the Ask Atlas `SearchField`. `FilterBar` defaults to `xsmall`, so always pass `size="medium"`. The dashboard search is as wide as one dashboard card and shares its left edge (`src/screens/Watchlist.css`).
+- Visual hierarchy follows the `anvil-layout-hierarchy` skill in `.claude/skills/`. Headings: page title (Page.Header) 24px, section h2 headline at default size with `noMargin` (20px), card titles headline `small` (16px). Spacing ladder: 12px (`gap="3"`) inside a cluster, 24px between controls and a card grid and between cards, page sections on `<Layout variant="wide">` (32px from 768px, 40px from 1024px).
 - Run exactly one dev server. Reuse it if one is already running.
 - Dependencies: Anvil2, router, state, React. Nothing else without asking.
 - Icons come only from the Anvil icon assets: `@servicetitan/anvil2/assets/icons/material/round/*.svg` and `.../st/*.svg`, imported through `src/icons.ts`. No Lucide and no `@servicetitan/anvil2-icons`. Trend arrows are `arrow_upward`, `arrow_downward` and `trending_flat`.
@@ -31,14 +33,20 @@ One component, `src/components/KpiCard.tsx`, fed by `src/lib/kpi.ts`. Do not bui
 - Never type a delta. The percent comes from `value` and `prior` via `resolveDelta`. Equal = neutral "0%". Prior of 0 = "New".
 - Fixed anatomy: header (title + period menu), value, period label, comparison, footer. No category or eyebrow text, titles only. Missing data hides a region's content but its row keeps its height, so tiles line up.
 - No long sentences. Two short lines under the value: the period label (`Nov 2026`) and the comparison (`↑ 1.27% vs ($742.83K) Oct 2026`). Arrow and percent take the state color, the prior value is bold. Missing value: "No data for this period". Missing prior: "Nothing to compare yet".
+- Header: title, info icon and period menu on one vertical center line, with exactly 8px (`gap="2"`) between neighbors. The info icon is therefore always 8px from the period menu. Titles are cut at `MAX_TITLE_LENGTH` (30) characters with an ellipsis; the full name is in the info tooltip and the heading name.
+- Tooltips: Anvil `Tooltip` only, never a native `title`. Every card has an info button (full metric name + description). The footer link has a tooltip only while its text is cut off.
 - Title: 2 lines then ellipsis. Value: 1 line, compact format, never wraps. null / NaN = "–". Zero is data.
 - Sparkline needs 3+ finite points, otherwise hidden. No axes, legend or tooltip. It is off everywhere for now: `showTrend` defaults to false. Pass `showTrend` to bring it back.
 - Comparison color follows `goodDirection`, not arrow direction.
-- Period menu items are fixed: Watchlist default, Day, Week, Month, Quarter, Year. Period and prior labels follow the selected period.
+- Period menu items are fixed: Day, Week, Month, Quarter, Year. No "Watchlist default" option. Each tile starts on its own `defaultPeriod`. Period and prior labels follow the selected period.
 - States come from the Figma "Scorecard" file: positive (success), negative (danger), neutral (subdued, flat icon).
 - Spacing (Anvil size steps, 1 = 4px): card padding 16, header to body 24 (`gap="6"`), body rows 4 (`gap="1"`).
 - Type (measured in the browser against the Scorecard spec): title `headline` small, value `Text size="xlarge"` with `<strong>` (24/36), period label and comparison `Text size="small"` (14/21).
-- Footer: the source dashboard or liveboard is an Anvil `LinkButton` that opens it (`sourceDashboardId`). The footer item has 16px above and 16px below the link, under a full-width divider. Anvil guidance prefers `Link` for navigation and `LinkButton` for actions, so revisit this if asked.
+- Footer: the source dashboard or liveboard is always an Anvil `LinkButton` that opens it (`source: { name, dashboardId }`, never a plain-text name). The footer item has 16px above and 16px below the link, under a full-width divider. Anvil guidance prefers `Link` for navigation and `LinkButton` for actions, so revisit this if asked.
+- Layout follows Anvil2 breakpoints (sm 640, md 768, lg 1024, xl 1280, xxl 1536), measured on the Layout's own width. The page is one `Layout` with a `Layout.Item` per section. Card rows are a nested `Layout` with a `Layout.Item` per card, never a hand-written grid. Installed Anvil2 has 4 columns below 768px and 12 from 768px.
+- KPI cards use `KPI_TILE_SPANS` (1, 2, 2, then 4 per row from lg). Every step divides the 4 collapsed cards evenly, so no card sits alone on a row. Dashboard cards use 1, 2, 2, then 3 per row from lg.
+- No carousel on the watchlist. It shows the first 4 cards. A right-aligned "See more" button directly under the cards reveals the rest and turns into "See less". With 4 cards or fewer there is no button.
+- A watchlist holds at most 5 cards (`MAX_WATCHLIST_CARDS` in `src/lib/kpi.ts`). The tiles, the metric picker cap and the empty-state text all read that one constant.
 - Every state is shown on `#/kpi-cards`. Add a case there before changing the card.
 
 ## Build loop per screen

@@ -1,0 +1,13 @@
+/* FilterBar has no width prop for its pinned search field. The dashboard search is as wide as one
+   dashboard card in grid view; the width is measured from the cards and set on the panel. */
+.dashboard-panel [data-anv="filter-search-field"] {
+  flex: 0 0 auto;
+  width: var(--dashboard-card-width, auto);
+  max-width: 100%;
+}
+
+/* FilterBar pads 4px left and right, which pushed the search 4px in from the card edge. Keep the
+   vertical padding and drop the side padding so the search and the cards share one left edge. */
+.dashboard-panel [data-anv="filter-bar"] {
+  padding-inline: 0;
+}

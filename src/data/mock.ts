@@ -11,8 +11,7 @@ export const KPIS: KpiSeed[] = [
     info: "Jobs marked completed in the selected period.",
     format: "count",
     defaultPeriod: "month",
-    source: "Operations Dashboard",
-    sourceDashboardId: "dash-001",
+    source: { name: "Operations Dashboard", dashboardId: "dash-001" },
     base: { value: 0, prior: 58, trend: [12, 14, 13, 15, 18, 26, 31, 22, 0] },
   },
   {
@@ -20,8 +19,7 @@ export const KPIS: KpiSeed[] = [
     title: "Excellent Query Performance",
     format: "percent",
     defaultPeriod: "month",
-    source: "AI and BI System Liveboard",
-    sourceDashboardId: "dash-011",
+    source: { name: "AI and BI System Liveboard", dashboardId: "dash-011" },
     base: { value: 23.97, prior: 6.26, trend: [8, 14, 12, 12, 13, 12, 13, 14, 24] },
   },
   {
@@ -29,8 +27,7 @@ export const KPIS: KpiSeed[] = [
     title: "Liveboard Impressions",
     format: "count",
     defaultPeriod: "month",
-    source: "AI and BI System Liveboard",
-    sourceDashboardId: "dash-011",
+    source: { name: "AI and BI System Liveboard", dashboardId: "dash-011" },
     base: { value: 3720, prior: 6300, trend: [10, 11, 14, 12, 13, 12, 12, 12, 9] },
   },
   {
@@ -40,8 +37,7 @@ export const KPIS: KpiSeed[] = [
     format: "percent",
     defaultPeriod: "week",
     goodDirection: "down", // fewer callbacks is good, so a drop is green
-    source: "Operations Dashboard",
-    sourceDashboardId: "dash-001",
+    source: { name: "Operations Dashboard", dashboardId: "dash-001" },
     base: { value: 4.2, prior: 5.1, trend: [6, 5.8, 5.5, 5.1, 4.9, 4.6, 4.4, 4.2] },
   },
   {
@@ -49,17 +45,15 @@ export const KPIS: KpiSeed[] = [
     title: "Weekly Active Users",
     format: "count",
     defaultPeriod: "week",
-    source: "AI and BI System Liveboard",
-    sourceDashboardId: "dash-011",
-    base: { value: 38 }, // no prior and no trend: delta line and sparkline are simply absent
+    source: { name: "AI and BI System Liveboard", dashboardId: "dash-011" },
+    base: { value: 38, prior: 38 }, // same as last period: the neutral state (flat arrow, 0%)
   },
   {
     id: "k6",
     title: "Annual Active Users",
     format: "count",
     defaultPeriod: "year",
-    source: "AI and BI System Liveboard",
-    sourceDashboardId: "dash-011",
+    source: { name: "AI and BI System Liveboard", dashboardId: "dash-011" },
     base: { value: null }, // no data
   },
 ];
@@ -69,39 +63,42 @@ export const KPI_EDGE_CASES: { label: string; seed: KpiSeed; state?: "ready" | "
   { label: "Positive (up is good)", seed: KPIS[1] },
   { label: "Negative (down is bad), zero value", seed: KPIS[0] },
   { label: "Positive (down is good)", seed: KPIS[3] },
-  { label: "No prior, no trend", seed: KPIS[4] },
+  {
+    label: "No prior, no trend",
+    seed: { id: "e12", title: "Weekly Active Users", format: "count", defaultPeriod: "week", source: { name: "AI and BI System Liveboard", dashboardId: "dash-011" }, base: { value: 38 } },
+  },
   { label: "No data (null)", seed: KPIS[5] },
   {
     label: "Very long title",
-    seed: { id: "e1", title: "Average Revenue Per Completed Job Across All Business Units, Service Lines and Membership Tiers", format: "currency", defaultPeriod: "month", source: "Executive Dashboard: Projects", base: { value: 1234.5, prior: 1100, trend: [1, 2, 3, 2, 4] } },
+    seed: { id: "e1", title: "Average Revenue Per Completed Job Across All Business Units, Service Lines and Membership Tiers", format: "currency", defaultPeriod: "month", source: { name: "Executive Dashboard: Projects", dashboardId: "dash-007" }, base: { value: 1234.5, prior: 1100, trend: [1, 2, 3, 2, 4] } },
   },
   {
     label: "Very long value",
-    seed: { id: "e2", title: "Lifetime Revenue", format: "currency", defaultPeriod: "month", source: "Finance", base: { value: 98765432100, prior: 91000000000, trend: [1, 3, 2, 5, 8] } },
+    seed: { id: "e2", title: "Lifetime Revenue", format: "currency", defaultPeriod: "month", source: { name: "Revenue Overview", dashboardId: "dash-002" }, base: { value: 98765432100, prior: 91000000000, trend: [1, 3, 2, 5, 8] } },
   },
   {
     label: "Negative value",
-    seed: { id: "e3", title: "Net Cash Flow", format: "currency", defaultPeriod: "month", source: "Finance", base: { value: -12400, prior: 8200, trend: [5, 3, 1, -2, -4] } },
+    seed: { id: "e3", title: "Net Cash Flow", format: "currency", defaultPeriod: "month", source: { name: "Revenue Overview", dashboardId: "dash-002" }, base: { value: -12400, prior: 8200, trend: [5, 3, 1, -2, -4] } },
   },
   {
     label: "Prior is 0 (New)",
-    seed: { id: "e4", title: "New Memberships", format: "count", defaultPeriod: "month", source: "Memberships", base: { value: 14, prior: 0, trend: [0, 0, 2, 5, 14] } },
+    seed: { id: "e4", title: "New Memberships", format: "count", defaultPeriod: "month", source: { name: "Membership Health", dashboardId: "dash-009" }, base: { value: 14, prior: 0, trend: [0, 0, 2, 5, 14] } },
   },
   {
     label: "Neutral (no change)",
-    seed: { id: "e5", title: "Open Estimates", format: "count", defaultPeriod: "month", source: "Sales", base: { value: 120, prior: 120, trend: [118, 120, 119, 121, 120] } },
+    seed: { id: "e5", title: "Open Estimates", format: "count", defaultPeriod: "month", source: { name: "Revenue Overview", dashboardId: "dash-002" }, base: { value: 120, prior: 120, trend: [118, 120, 119, 121, 120] } },
   },
   {
     label: "Huge % change",
-    seed: { id: "e6", title: "Web Leads", format: "count", defaultPeriod: "month", source: "Marketing", base: { value: 52000, prior: 40, trend: [1, 2, 9, 40, 52] } },
+    seed: { id: "e6", title: "Web Leads", format: "count", defaultPeriod: "month", source: { name: "Marketing ROI", dashboardId: "dash-006" }, base: { value: 52000, prior: 40, trend: [1, 2, 9, 40, 52] } },
   },
   {
     label: "Flat trend",
-    seed: { id: "e7", title: "Technician Count", format: "count", defaultPeriod: "month", source: "HR", base: { value: 42, prior: 40, trend: [42, 42, 42, 42, 42] } },
+    seed: { id: "e7", title: "Technician Count", format: "count", defaultPeriod: "month", source: { name: "Technician Performance", dashboardId: "dash-003" }, base: { value: 42, prior: 40, trend: [42, 42, 42, 42, 42] } },
   },
   {
     label: "Trend with NaN / too few points",
-    seed: { id: "e8", title: "Booked Jobs", format: "count", defaultPeriod: "month", source: "Booking", base: { value: 310, prior: 280, trend: [Number.NaN, 5, Number.NaN] } },
+    seed: { id: "e8", title: "Booked Jobs", format: "count", defaultPeriod: "month", source: { name: "Call Booking Funnel", dashboardId: "dash-005" }, base: { value: 310, prior: 280, trend: [Number.NaN, 5, Number.NaN] } },
   },
   {
     label: "No source (footer hidden)",
@@ -109,7 +106,7 @@ export const KPI_EDGE_CASES: { label: string; seed: KpiSeed; state?: "ready" | "
   },
   {
     label: "Very long source name (link truncates)",
-    seed: { id: "e11", title: "Open Estimates", format: "count", defaultPeriod: "month", source: "Residential Plumbing Sales Pipeline and Estimate Follow-up Executive Liveboard", sourceDashboardId: "dash-001", base: { value: 88, prior: 80 } },
+    seed: { id: "e11", title: "Open Estimates", format: "count", defaultPeriod: "month", source: { name: "Residential Plumbing Sales Pipeline and Estimate Follow-up Executive Liveboard", dashboardId: "dash-001" }, base: { value: 88, prior: 80 } },
   },
   { label: "Loading", seed: KPIS[1], state: "loading" },
   { label: "Error", seed: KPIS[1], state: "error" },
@@ -163,15 +160,22 @@ const BADGES: Dashboard["badge"][] = ["Built-In", "Created by Me", "Shared with 
 const DESC =
   "Daily operations snapshot — revenue, conversion, utilization. Track the numbers your team checks every morning.";
 
-export const DASHBOARDS: Dashboard[] = Array.from({ length: 80 }, (_, i) => ({
-  id: `dash-${String(i + 1).padStart(3, "0")}`,
-  name: i < NAMES.length ? NAMES[i] : `${NAMES[i % NAMES.length]} ${Math.floor(i / NAMES.length) + 1}`,
-  description: DESC,
-  tabs: 3 + (i % 6),
-  modules: 4 + (i % 9),
-  badge: BADGES[i % 3],
-  owner: OWNERS[i % 3],
-  openedAgo: i < 6 ? `${i + 1} day${i ? "s" : ""} ago` : `${Math.floor(i / 4) + 1} weeks ago`,
-  openedRank: i,
-  bookmarked: true, // all 80 start bookmarked, matching the "1 - 6 of 80 items" in the design
-}));
+// Opened order is scrambled (37 is coprime with 80, so every rank is used once) so "Recently Opened"
+// shows different dashboards from "Bookmarked", which lists in id order.
+const openedRank = (i: number) => (i * 37 + 5) % 80;
+
+export const DASHBOARDS: Dashboard[] = Array.from({ length: 80 }, (_, i) => {
+  const rank = openedRank(i);
+  return {
+    id: `dash-${String(i + 1).padStart(3, "0")}`,
+    name: i < NAMES.length ? NAMES[i] : `${NAMES[i % NAMES.length]} ${Math.floor(i / NAMES.length) + 1}`,
+    description: DESC,
+    tabs: 3 + (i % 6),
+    modules: 4 + (i % 9),
+    badge: BADGES[i % 3],
+    owner: OWNERS[i % 3],
+    openedAgo: rank < 6 ? `${rank + 1} day${rank ? "s" : ""} ago` : `${Math.floor(rank / 4) + 1} weeks ago`,
+    openedRank: rank,
+    bookmarked: true, // all 80 start bookmarked, matching the "1 - 6 of 80 items" in the design
+  };
+});

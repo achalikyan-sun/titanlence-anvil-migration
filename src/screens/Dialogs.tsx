@@ -14,8 +14,9 @@ import {
   toast,
 } from "@servicetitan/anvil2";
 import { METRICS } from "../data/mock";
+import { MAX_WATCHLIST_CARDS } from "../lib/kpi";
 
-const CAP = 10; // S1-13: selection limit
+const CAP = MAX_WATCHLIST_CARDS; // S1-13: selection limit
 
 export function AddToWatchlistDialog(props: {
   open: boolean;

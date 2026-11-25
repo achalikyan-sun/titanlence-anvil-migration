@@ -13,3 +13,5 @@ export { default as IconTrendingUp } from "@servicetitan/anvil2/assets/icons/mat
 export { default as IconTrendingDown } from "@servicetitan/anvil2/assets/icons/material/round/trending_down.svg";
 export { default as IconTrendingFlat } from "@servicetitan/anvil2/assets/icons/material/round/trending_flat.svg";
 export { default as IconInfo } from "@servicetitan/anvil2/assets/icons/material/round/info.svg";
+export { default as IconChevronUp } from "@servicetitan/anvil2/assets/icons/material/round/keyboard_arrow_up.svg";
+export { default as IconMoreVertical } from "@servicetitan/anvil2/assets/icons/material/round/more_vert.svg";

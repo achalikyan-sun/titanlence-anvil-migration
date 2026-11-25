@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Button,
@@ -6,8 +6,8 @@ import {
   Chip,
   Divider,
   Flex,
-  Grid,
   Layout,
+  Link,
   Menu,
   Page,
   Pagination,
@@ -20,11 +20,12 @@ import {
 } from "@servicetitan/anvil2";
 import { FilterBar, InteractiveCard } from "@servicetitan/anvil2/beta";
 import { EmptyStateFirstUse, EmptyStateNoSearchResults } from "@servicetitan/anvil2-illustrations";
-import { IconAdd, IconChevronLeft, IconChevronRight, IconEdit, IconGrid, IconList, IconMore } from "../icons";
+import { IconAdd, IconChevronDown, IconChevronUp, IconGrid, IconList, IconMore, IconMoreVertical } from "../icons";
 import { DASHBOARDS, KPIS, METRICS, type Dashboard } from "../data/mock";
-import { KpiCard, TILE_MIN_WIDTH } from "../components/KpiCard";
-import type { KpiPeriod } from "../lib/kpi";
+import { KPI_TILE_SPANS, KpiCard } from "../components/KpiCard";
+import { MAX_WATCHLIST_CARDS, type KpiPeriod } from "../lib/kpi";
 import { AddToWatchlistDialog, ExportDialog, ScheduleDialog, ShareDialog } from "./Dialogs";
+import "./Watchlist.css";
 
 // Overlay states are kept in the URL: ?state=add-metrics | share | schedule | export  (&id=<dashboard id>)
 // Page states: ?state=empty-watchlist | loading
@@ -34,7 +35,14 @@ const SORTS = [
   { id: "name", label: "Name (A-Z)" },
 ];
 const OWNERS = [...new Set(DASHBOARDS.map((d) => d.owner))].map((o) => ({ id: o, label: o }));
-const VISIBLE_TILES = 4;
+// Anvil2 Layout spans. Below 768px the Layout has 4 columns, from 768px it has 12.
+// A page section (and a dashboard in list view) spans the full row at every breakpoint.
+const SECTION_SPANS = { xs: 4, md: 12 } as const;
+// Dashboard cards in grid view: 1 per row below 640px, 2 from sm and md, 3 from lg (never more than 3).
+const DASHBOARD_GRID_SPANS = { xs: 4, sm: 2, md: 6, lg: 4, xl: 4, xxl: 4 } as const;
+
+// Cards shown while the watchlist is collapsed. Anything beyond this sits behind "See more".
+const COLLAPSED_CARDS = 4;
 
 export function Watchlist() {
   const [params, setParams] = useSearchParams();
@@ -53,6 +61,13 @@ export function Watchlist() {
 
   // Loading: skeletons first, and tab counts show a dash rather than 0.
   const [loading, setLoading] = useState(true);
+  // Refresh reloads only the watchlist tiles: skeletons for a moment, then fresh data. The rest of the page stays put.
+  const [refreshing, setRefreshing] = useState(false);
+  useEffect(() => {
+    if (!refreshing) return;
+    const t = setTimeout(() => setRefreshing(false), 700);
+    return () => clearTimeout(t);
+  }, [refreshing]);
   useEffect(() => {
     const t = setTimeout(() => setLoading(false), state === "loading" ? 60_000 : 700);
     return () => clearTimeout(t);
@@ -64,9 +79,9 @@ export function Watchlist() {
 
   // Watchlist
   const [watchlist, setWatchlist] = useState<string[]>([]);
-  const [offset, setOffset] = useState(0);
+  const [expanded, setExpanded] = useState(false);
   const [periods, setPeriods] = useState<Record<string, KpiPeriod>>({});
-  const tiles = state === "empty-watchlist" ? [] : KPIS;
+  const tiles = state === "empty-watchlist" ? [] : KPIS.slice(0, MAX_WATCHLIST_CARDS);
 
   // Dashboards
   const [dashboards, setDashboards] = useState<Dashboard[]>(DASHBOARDS);
@@ -113,7 +128,114 @@ export function Watchlist() {
   }, [submitted, dashboards]);
 
   const targetDashboard = dashboards.find((d) => d.id === targetId);
-  const maxOffset = Math.max(0, KPIS.length - VISIBLE_TILES);
+  // "See more" only exists when there is something more to show.
+  const hasMore = tiles.length > COLLAPSED_CARDS;
+  const shownTiles = expanded || !hasMore ? tiles : tiles.slice(0, COLLAPSED_CARDS);
+
+  // Dashboard search width = one dashboard card in grid view. Measured from the first card so it
+  // follows the Anvil Layout breakpoints. List view keeps the last grid width.
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [cardWidth, setCardWidth] = useState<number>();
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!panel || view !== "grid") return;
+    const measure = () => {
+      const card = panel.querySelector('[data-anv="card"]');
+      if (card) setCardWidth(Math.round(card.getBoundingClientRect().width));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(panel);
+    return () => ro.disconnect();
+  });
+
+  // Shared content of both dashboard tabs. Rendered inside the active Tab.Panel only.
+  const dashboardPanel = (
+    <Flex
+      ref={panelRef}
+      direction="column"
+      gap="6"
+      className="dashboard-panel"
+      style={{ "--dashboard-card-width": cardWidth ? `${cardWidth}px` : undefined } as CSSProperties}
+    >
+      <FilterBar
+        size="medium"
+        associatedContent="dashboards"
+        filters={[
+          { id: "search", type: "search", label: "Search dashboards", placeholder: "Search dashboards", value: dashQuery },
+          { id: "creator", type: "multiSelect", label: "Created By", options: OWNERS, selectedOptions: creators },
+          { id: "sort", type: "singleSelect", label: "Sort By", options: SORTS, selectedOption: sort },
+        ]}
+        onFilterChange={(next) => {
+          for (const f of next) {
+            if (f.id === "search" && f.type === "search") setDashQuery(f.value ?? "");
+            if (f.id === "creator" && f.type === "multiSelect") setCreators(f.selectedOptions ?? []);
+            if (f.id === "sort" && f.type === "singleSelect") setSort(f.selectedOption as (typeof SORTS)[number] | undefined);
+          }
+        }}
+      />
+
+      {loading ? (
+        <Layout>
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <Layout.Item key={i} {...DASHBOARD_GRID_SPANS}>
+              <SkeletonRectangle height="170px" />
+            </Layout.Item>
+          ))}
+        </Layout>
+      ) : pageItems.length === 0 ? (
+        <Flex direction="column" alignItems="center" gap="4">
+          <Flex direction="column" alignItems="center">
+            <EmptyStateNoSearchResults aria-hidden="true" height={160} />
+            <Text variant="headline" el="h3" size="small">
+              {filtersActive ? "No dashboards match these filters" : "Bookmark your dashboards"}
+            </Text>
+            <Text subdued>
+              {filtersActive
+                ? "Try another search or clear the filters."
+                : "Bookmarked dashboards will appear here for quick access."}
+            </Text>
+          </Flex>
+          {filtersActive && (
+            <Button
+              onClick={() => {
+                setDashQuery("");
+                setCreators([]);
+              }}
+            >
+              Clear filters
+            </Button>
+          )}
+        </Flex>
+      ) : (
+        <Layout>
+          {pageItems.map((d) => (
+            <Layout.Item key={d.id} {...(view === "grid" ? DASHBOARD_GRID_SPANS : SECTION_SPANS)}>
+              <DashboardCard
+                d={d}
+                onOpen={() => navigate(`/dashboards/${d.id}`)}
+                onBookmark={() => toggleBookmark(d)}
+                onAction={(a) => setState(a, d.id)}
+                onDuplicate={() => toast.info({ title: "Dashboard duplicated", message: `A copy of ${d.name} was created.` })}
+              />
+            </Layout.Item>
+          ))}
+        </Layout>
+      )}
+
+      {!loading && visible.length > perPage && (
+        <Pagination
+          page={page}
+          itemsPerPage={perPage}
+          itemsPerPageOptions={[6, 12, 24]}
+          totalItemCount={visible.length}
+          showCount
+          onPageChange={setPage}
+          onItemsPerPageChange={setPerPage}
+        />
+      )}
+    </Flex>
+  );
 
   return (
     <Page>
@@ -127,9 +249,9 @@ export function Watchlist() {
         }
       />
       <Page.Content>
-        <Layout>
-          <Layout.Item span={12}>
-            <Flex direction="column" gap="6">
+        {/* variant="wide": wider gaps between page sections than between the cards inside them. */}
+        <Layout variant="wide">
+          <Layout.Item {...SECTION_SPANS}>
               {/* Page search */}
               <Flex direction="column" gap="3">
                 <SearchField
@@ -149,172 +271,126 @@ export function Watchlist() {
                   }}
                 />
                 {results && (
-                  <Card flexDirection="column" gap="3">
-                    <Text variant="headline" el="h3" size="small">
-                      Dashboards
-                    </Text>
-                    {results.dashboards.length === 0 && <Text subdued>No dashboards match.</Text>}
-                    {results.dashboards.map((d) => (
-                      <Button key={d.id} appearance="ghost" onClick={() => navigate(`/dashboards/${d.id}`)}>
-                        {d.name}
-                      </Button>
-                    ))}
-                    <Text variant="headline" el="h3" size="small">
-                      Metrics
-                    </Text>
-                    {results.metrics.length === 0 && <Text subdued>No metrics match.</Text>}
-                    {results.metrics.map((m) => (
-                      <Text key={m.id}>
-                        {m.name} · {m.category}
+                  <Card flexDirection="column" gap="6">
+                    {/* Two result groups: 8px inside a group, 24px between groups. h2 because nothing sits between it and the page h1. */}
+                    <Flex direction="column" gap="2">
+                      <Text variant="headline" el="h2" size="small">
+                        Dashboards
                       </Text>
-                    ))}
+                      {results.dashboards.length === 0 && <Text subdued>No dashboards match.</Text>}
+                      {results.dashboards.map((d) => (
+                        <Link key={d.id} href={`#/dashboards/${d.id}`} ghost alignSelf="flex-start">
+                          {d.name}
+                        </Link>
+                      ))}
+                    </Flex>
+                    <Flex direction="column" gap="2">
+                      <Text variant="headline" el="h2" size="small">
+                        Metrics
+                      </Text>
+                      {results.metrics.length === 0 && <Text subdued>No metrics match.</Text>}
+                      {results.metrics.map((m) => (
+                        <Text key={m.id}>
+                          {m.name} · {m.category}
+                        </Text>
+                      ))}
+                    </Flex>
                   </Card>
                 )}
               </Flex>
-
+          </Layout.Item>
+          <Layout.Item {...SECTION_SPANS}>
               {/* Watchlist */}
               <Flex direction="column" gap="3">
                 <Flex alignItems="center" gap="2">
-                  <Text variant="headline" el="h2" size="large">
+                  <Text variant="headline" el="h2" noMargin>
                     Watchlist
                   </Text>
-                  <Button icon={IconEdit} aria-label="Edit watchlist" appearance="ghost" size="small" onClick={() => setState("add-metrics")} />
+                  <Menu icon={IconMoreVertical} aria-label="Watchlist actions" appearance="ghost" size="small">
+                    <Menu.Item label="Edit" onClick={() => setState("add-metrics")} />
+                    <Menu.Item label="Refresh" onClick={() => setRefreshing(true)} />
+                  </Menu>
                 </Flex>
-                {loading ? (
-                  <Grid gap="4" templateColumns={`repeat(auto-fit, minmax(${TILE_MIN_WIDTH}, 1fr))`}>
+                {loading || refreshing ? (
+                  <Layout>
                     {[0, 1, 2, 3].map((i) => (
-                      <SkeletonRectangle key={i} height="12.5rem" />
+                      <Layout.Item key={i} {...KPI_TILE_SPANS}>
+                        <SkeletonRectangle height="12.5rem" />
+                      </Layout.Item>
                     ))}
-                  </Grid>
+                  </Layout>
                 ) : tiles.length === 0 ? (
                   <Flex direction="column" alignItems="center" gap="4">
                     <Flex direction="column" alignItems="center">
                       <EmptyStateFirstUse aria-hidden="true" height={160} />
-                      <Text variant="headline" el="h3">
+                      <Text variant="headline" el="h3" size="small">
                         Watch the numbers you check every day
                       </Text>
-                      <Text subdued>Pick up to 10 metrics and see each one against the period before.</Text>
+                      <Text subdued>{`Pick up to ${MAX_WATCHLIST_CARDS} metrics and see each one against the period before.`}</Text>
                     </Flex>
                     <Button appearance="primary" icon={{ before: IconAdd }} onClick={() => setState("add-metrics")}>
                       Add metrics
                     </Button>
                   </Flex>
                 ) : (
-                  <Flex alignItems="center" gap="2">
-                    <Button icon={IconChevronLeft} aria-label="Previous metrics" appearance="ghost" disabled={offset === 0} onClick={() => setOffset((o) => Math.max(0, o - 1))} />
-                    <Grid gap="4" flex="1" style={{ minWidth: 0 }} templateColumns={`repeat(auto-fit, minmax(${TILE_MIN_WIDTH}, 1fr))`}>
-                      {KPIS.slice(offset, offset + VISIBLE_TILES).map((k) => (
-                        <KpiCard
-                          key={k.id}
-                          seed={k}
-                          onOpenSource={(id) => navigate(`/dashboards/${id}`)}
-                          period={periods[k.id] ?? k.defaultPeriod}
-                          onPeriodChange={(p) => setPeriods((all) => ({ ...all, [k.id]: p }))}
-                        />
+                  <Flex direction="column" gap="3">
+                    {/* Nested Layout for the tile row. Its breakpoints follow the page Layout's width. */}
+                    <Layout>
+                      {shownTiles.map((k) => (
+                        <Layout.Item key={k.id} {...KPI_TILE_SPANS}>
+                          <KpiCard
+                            seed={k}
+                            onOpenSource={(id) => navigate(`/dashboards/${id}`)}
+                            period={periods[k.id] ?? k.defaultPeriod}
+                            onPeriodChange={(p) => setPeriods((all) => ({ ...all, [k.id]: p }))}
+                          />
+                        </Layout.Item>
                       ))}
-                    </Grid>
-                    <Button icon={IconChevronRight} aria-label="Next metrics" appearance="ghost" disabled={offset >= maxOffset} onClick={() => setOffset((o) => Math.min(maxOffset, o + 1))} />
+                    </Layout>
+                    {/* Right-aligned, directly under the cards. Collapsed: "See more". Expanded: "See less".
+                        No button at all when every card already fits. */}
+                    {hasMore && (
+                      <Flex justifyContent="end">
+                        <Button
+                          appearance="ghost"
+                          icon={{ after: expanded ? IconChevronUp : IconChevronDown }}
+                          aria-expanded={expanded}
+                          onClick={() => setExpanded((e) => !e)}
+                        >
+                          {expanded ? "See less" : "See more"}
+                        </Button>
+                      </Flex>
+                    )}
                   </Flex>
                 )}
               </Flex>
-
+          </Layout.Item>
+          <Layout.Item {...SECTION_SPANS}>
               {/* Dashboards */}
               <Flex direction="column" gap="3">
-                <Text variant="headline" el="h2" size="large">
+                <Text variant="headline" el="h2" noMargin>
                   Dashboards
                 </Text>
-                <Flex alignItems="center" justifyContent="space-between" gap="3">
-                  <Tab index={tab} onIndexChange={setTab}>
+                {/* Anvil Tab: one Tab.Button per Tab.Panel, and everything that changes between tabs lives inside the panel. */}
+                <Tab index={tab} onIndexChange={setTab} flexDirection="column" gap="3">
+                  <Flex alignItems="center" justifyContent="space-between" gap="3">
                     <Tab.List>
-                      <Tab.Button id="tab-recent" controls="panel-list">
+                      <Tab.Button id="tab-recent" controls="panel-recent">
                         Recently Opened <Chip size="small" label={loading ? "–" : String(recent.length)} />
                       </Tab.Button>
-                      <Tab.Button id="tab-bookmarked" controls="panel-list">
+                      <Tab.Button id="tab-bookmarked" controls="panel-bookmarked">
                         Bookmarked <Chip size="small" label={loading ? "–" : String(bookmarked.length)} />
                       </Tab.Button>
                     </Tab.List>
-                    <Tab.Panel id="panel-list">{null}</Tab.Panel>
-                  </Tab>
-                  <SegmentedControl selected={view} onChange={(v) => setView(v as "grid" | "list")} name="view">
-                    <SegmentedControl.Segment value="grid" icon={IconGrid} aria-label="Grid view" />
-                    <SegmentedControl.Segment value="list" icon={IconList} aria-label="List view" />
-                  </SegmentedControl>
-                </Flex>
-
-                <FilterBar
-                  associatedContent="dashboards"
-                  filters={[
-                    { id: "search", type: "search", label: "Search dashboards", placeholder: "Search dashboards", value: dashQuery },
-                    { id: "creator", type: "multiSelect", label: "Created By", options: OWNERS, selectedOptions: creators },
-                    { id: "sort", type: "singleSelect", label: "Sort By", options: SORTS, selectedOption: sort },
-                  ]}
-                  onFilterChange={(next) => {
-                    for (const f of next) {
-                      if (f.id === "search" && f.type === "search") setDashQuery(f.value ?? "");
-                      if (f.id === "creator" && f.type === "multiSelect") setCreators(f.selectedOptions ?? []);
-                      if (f.id === "sort" && f.type === "singleSelect") setSort(f.selectedOption as (typeof SORTS)[number] | undefined);
-                    }
-                  }}
-                />
-
-                {loading ? (
-                  <Grid gap="4" templateColumns="repeat(3, minmax(0, 1fr))">
-                    {[0, 1, 2, 3, 4, 5].map((i) => (
-                      <SkeletonRectangle key={i} height="170px" />
-                    ))}
-                  </Grid>
-                ) : pageItems.length === 0 ? (
-                  <Flex direction="column" alignItems="center" gap="4">
-                    <Flex direction="column" alignItems="center">
-                      <EmptyStateNoSearchResults aria-hidden="true" height={160} />
-                      <Text variant="headline" el="h3">
-                        {filtersActive ? "No dashboards match these filters" : "Bookmark your dashboards"}
-                      </Text>
-                      <Text subdued>
-                        {filtersActive
-                          ? "Try another search or clear the filters."
-                          : "Bookmarked dashboards will appear here for quick access."}
-                      </Text>
-                    </Flex>
-                    {filtersActive && (
-                      <Button
-                        onClick={() => {
-                          setDashQuery("");
-                          setCreators([]);
-                        }}
-                      >
-                        Clear filters
-                      </Button>
-                    )}
+                    <SegmentedControl selected={view} onChange={(v) => setView(v as "grid" | "list")} name="view">
+                      <SegmentedControl.Segment value="grid" icon={IconGrid} aria-label="Grid view" />
+                      <SegmentedControl.Segment value="list" icon={IconList} aria-label="List view" />
+                    </SegmentedControl>
                   </Flex>
-                ) : (
-                  <Grid gap="4" templateColumns={view === "grid" ? "repeat(3, minmax(0, 1fr))" : "1fr"}>
-                    {pageItems.map((d) => (
-                      <DashboardCard
-                        key={d.id}
-                        d={d}
-                        onOpen={() => navigate(`/dashboards/${d.id}`)}
-                        onBookmark={() => toggleBookmark(d)}
-                        onAction={(a) => setState(a, d.id)}
-                        onDuplicate={() => toast.info({ title: "Dashboard duplicated", message: `A copy of ${d.name} was created.` })}
-                      />
-                    ))}
-                  </Grid>
-                )}
-
-                {!loading && visible.length > perPage && (
-                  <Pagination
-                    page={page}
-                    itemsPerPage={perPage}
-                    itemsPerPageOptions={[6, 12, 24]}
-                    totalItemCount={visible.length}
-                    showCount
-                    onPageChange={setPage}
-                    onItemsPerPageChange={setPerPage}
-                  />
-                )}
+                  <Tab.Panel id="panel-recent">{tab === 0 && dashboardPanel}</Tab.Panel>
+                  <Tab.Panel id="panel-bookmarked">{tab === 1 && dashboardPanel}</Tab.Panel>
+                </Tab>
               </Flex>
-            </Flex>
           </Layout.Item>
         </Layout>
       </Page.Content>
@@ -361,7 +437,7 @@ function DashboardCard(props: {
           <Menu.Item label="Schedule" onClick={() => props.onAction("schedule")} />
         </Menu>
       </Flex>
-      <Text subdued>{d.description}</Text>
+      <Text subdued size="small">{d.description}</Text>
       <Text subdued size="small">
         {d.tabs} Tabs · {d.modules} Modules
       </Text>
